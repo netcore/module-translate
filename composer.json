@@ -1,15 +1,22 @@
 {
-    "name": "netcore/translate",
+    "name": "netcore/module-translate",
     "description": "",
+    "type": "module",
     "authors": [
         {
-            "name": "Jānis Blaus",
-            "email": "janis@netcore.lv"
+            "name": "Daniels Grietins",
+            "email": "daniels.grietins@netcore.lv"
         }
     ],
     "autoload": {
         "psr-4": {
             "Modules\\Translate\\": ""
         }
-    }
+    },
+
+    "require": {
+        "netcore/translations": "^1.0",
+        "predis/predis": "^1.1"
+    },
+    "minimum-stability": "dev"
 }
