@@ -4,6 +4,7 @@ namespace Modules\Translate\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Factory;
+use Modules\Translate\Console\ImportTranslations;
 
 class TranslateServiceProvider extends ServiceProvider
 {
@@ -36,6 +37,10 @@ class TranslateServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->register(\Netcore\Translator\ServiceProvider::class);
+
+        $this->commands([
+            ImportTranslations::class,
+        ]);
     }
 
     /**
