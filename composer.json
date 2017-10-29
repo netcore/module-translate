@@ -1,0 +1,15 @@
+{
+    "name": "netcore/translate",
+    "description": "",
+    "authors": [
+        {
+            "name": "Jānis Blaus",
+            "email": "janis@netcore.lv"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Translate\\": ""
+        }
+    }
+}
