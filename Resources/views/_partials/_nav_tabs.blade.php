@@ -6,7 +6,7 @@
                 class="{{ $loop->first ? 'active' : '' }}"
         >
             <a
-                    href="#{{ $language->iso_code }}"
+                    href="#{{ isset($idPrefix) ? $idPrefix : '' }}{{ $language->iso_code }}"
                     aria-controls="{{ $language->iso_code }}"
                     role="tab"
                     data-toggle="tab"
