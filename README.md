@@ -55,4 +55,4 @@ In php:
 
 ```trans('validation.url)```
 
-More info about package can be found in [netcore/translations package] (https://github.com/netcore/translations)
+More info about package can be found in (https://github.com/netcore/translations)
