@@ -24,29 +24,32 @@ class MenusTableSeeder extends Seeder
         $menuItems = [
             'leftAdminMenu' => [
                 [
-                    'name'       => 'Translate',
-                    'icon'       => '',
-                    'type'       => 'url',
-                    'value'      => '#',
-                    'module'     => '',
-                    'is_active'  => 1,
-                    'parameters' => json_encode([]),
-                    'children'   => [
+                    'name'            => 'Translate',
+                    'icon'            => 'fa fa-globe',
+                    'type'            => 'url',
+                    'value'           => '#',
+                    'module'          => 'Translate',
+                    'is_active'       => 1,
+                    'active_resolver' => 'admin.translations.*,admin.languages.*',
+                    'parameters'      => json_encode([]),
+                    'children'        => [
                         [
-                            'name'       => 'Translations',
-                            'type'       => 'url',
-                            'value'      => '/admin/translations',
-                            'module'     => '',
-                            'is_active'  => 1,
-                            'parameters' => json_encode([])
+                            'name'            => 'Translations',
+                            'type'            => 'route',
+                            'value'           => 'admin.translations.index',
+                            'module'          => '',
+                            'is_active'       => 1,
+                            'active_resolver' => 'admin.translations.*',
+                            'parameters'      => json_encode([])
                         ],
                         [
-                            'name'       => 'Languages',
-                            'type'       => 'url',
-                            'value'      => '/admin/languages',
-                            'module'     => '',
-                            'is_active'  => 1,
-                            'parameters' => json_encode([])
+                            'name'            => 'Languages',
+                            'type'            => 'route',
+                            'value'           => 'admin.languages.index',
+                            'module'          => '',
+                            'is_active'       => 1,
+                            'active_resolver' => 'admin.languages.*',
+                            'parameters'      => json_encode([])
                         ],
                     ]
                 ],
@@ -63,12 +66,12 @@ class MenusTableSeeder extends Seeder
                 $item['parent_id'] = null;
                 $parentItem = MenuItem::firstOrCreate(array_except($item, 'children'));
 
-                if(isset($item['children'])) {
+                if (isset($item['children'])) {
                     foreach ($item['children'] as $child) {
                         $child['parent_id'] = $parentItem->id;
                         $child['menu_id'] = $menu->id;
 
-                        if((!$config['translations'] && $child['name'] == 'Translations') || (!$config['languages'] && $child['name'] == 'Languages')) {
+                        if ((!$config['translations'] && $child['name'] == 'Translations') || (!$config['languages'] && $child['name'] == 'Languages')) {
                             continue;
                         }
                         MenuItem::firstOrCreate($child);
