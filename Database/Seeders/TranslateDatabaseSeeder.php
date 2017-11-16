@@ -16,6 +16,6 @@ class TranslateDatabaseSeeder extends Seeder
     {
         Model::unguard();
 
-         $this->call(MenusTableSeeder::class);
+        $this->call(MenusTableSeeder::class);
     }
 }

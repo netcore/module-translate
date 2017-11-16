@@ -5,7 +5,7 @@ namespace Modules\Translate\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Admin\Models\Menu;
-use Modules\Admin\Models\MenuItem;
+use Netcore\Translator\Helpers\TransHelper;
 
 class MenusTableSeeder extends Seeder
 {
@@ -62,22 +62,36 @@ class MenusTableSeeder extends Seeder
             ]);
 
             foreach ($items as $item) {
-                $item['menu_id'] = $menu->id;
-                $item['parent_id'] = null;
-                $parentItem = MenuItem::firstOrCreate(array_except($item, 'children'));
+                $row = $menu->items()->firstOrCreate(array_except($item, ['name', 'value', 'parameters', 'children']));
 
-                if (isset($item['children'])) {
-                    foreach ($item['children'] as $child) {
-                        $child['parent_id'] = $parentItem->id;
-                        $child['menu_id'] = $menu->id;
-
-                        if ((!$config['translations'] && $child['name'] == 'Translations') || (!$config['languages'] && $child['name'] == 'Languages')) {
-                            continue;
-                        }
-                        MenuItem::firstOrCreate($child);
-                    }
+                $translations = [];
+                foreach (TransHelper::getAllLanguages() as $language) {
+                    $translations[$language->iso_code] = [
+                        'name'       => $item['name'],
+                        'value'      => $item['value'],
+                        'parameters' => $item['parameters']
+                    ];
                 }
+                $row->updateTranslations($translations);
 
+                foreach ($item['children'] as $child) {
+                    $child['menu_id'] = $menu->id;
+
+                    if ((!$config['translations'] && $child['name'] == 'Translations') || (!$config['languages'] && $child['name'] == 'Languages')) {
+                        continue;
+                    }
+
+                    $c = $row->children()->firstOrCreate(array_except($child, ['name', 'value', 'parameters']));
+                    $translations = [];
+                    foreach (TransHelper::getAllLanguages() as $language) {
+                        $translations[$language->iso_code] = [
+                            'name'       => $child['name'],
+                            'value'      => $child['value'],
+                            'parameters' => $child['parameters']
+                        ];
+                    }
+                    $c->updateTranslations($translations);
+                }
             }
         }
     }
