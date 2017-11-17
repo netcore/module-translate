@@ -42,11 +42,32 @@ trait SyncTranslations
             }
 
             $translation = $this->translations()->where('locale', $lang)->first();
+
+            // Make sure we can translate Stapler files as well
+            $staplerConfig = (array) object_get($translation, 'staplerConfig', []);
+            $staplerFields = array_keys($staplerConfig);
+            foreach($staplerFields as $staplerField) {
+                $array = collect($array)->filter(function($value, $key) use ($staplerField) {
+
+                    $removable = [
+                        $staplerField . '_file_name',
+                        $staplerField . '_file_size',
+                        $staplerField . '_content_type',
+                        $staplerField . '_updated_at'
+                    ];
+
+                    if(in_array($key, $removable)) {
+                        return false;
+                    }
+
+                    return true;
+                })->toArray();
+            }
+
             if (!$translation) {
-                $translation = $this->translations()->create($array);
+                $this->translations()->create($array);
             } else {
-                $translation->fill($array);
-                $translation->save();
+                $translation->update($array);
             }
         }
     }
