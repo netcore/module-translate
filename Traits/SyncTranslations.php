@@ -18,7 +18,7 @@ trait SyncTranslations
             $array[$lang]['locale'] = $lang;
 
             foreach ($this->translatedAttributes as $attribute) {
-                $array[$lang][$attribute] = isset($values[$lang][$attribute]) ? $values[$lang][$attribute] : null;
+                $array[$lang][$attribute] = isset($values[$lang][$attribute]) ? $values[$lang][$attribute] : '';
             }
         }
 
@@ -38,16 +38,16 @@ trait SyncTranslations
             $array['locale'] = $lang;
 
             foreach ($this->translatedAttributes as $key => $attribute) {
-                $array[$attribute] = isset($values[$lang][$attribute]) ? $values[$lang][$attribute] : null;
+                $array[$attribute] = isset($values[$lang][$attribute]) ? $values[$lang][$attribute] : '';
             }
 
             $translation = $this->translations()->where('locale', $lang)->first();
 
             // Make sure we can translate Stapler files as well
-            $staplerConfig = (array) object_get($translation, 'staplerConfig', []);
+            $staplerConfig = (array)object_get($translation, 'staplerConfig', []);
             $staplerFields = array_keys($staplerConfig);
-            foreach($staplerFields as $staplerField) {
-                $array = collect($array)->filter(function($value, $key) use ($staplerField) {
+            foreach ($staplerFields as $staplerField) {
+                $array = collect($array)->filter(function ($value, $key) use ($staplerField) {
 
                     $removable = [
                         $staplerField . '_file_name',
@@ -56,7 +56,7 @@ trait SyncTranslations
                         $staplerField . '_updated_at'
                     ];
 
-                    if(in_array($key, $removable)) {
+                    if (in_array($key, $removable)) {
                         return false;
                     }
 
@@ -64,7 +64,7 @@ trait SyncTranslations
                 })->toArray();
             }
 
-            if (!$translation) {
+            if (! $translation) {
                 $this->translations()->create($array);
             } else {
                 $translation->update($array);
