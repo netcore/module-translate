@@ -44,7 +44,7 @@ trait SyncTranslations
             $translation = $this->translations()->where('locale', $lang)->first();
 
             // Make sure we can translate Stapler files as well
-            $staplerConfig = (array)object_get($translation, 'staplerConfig', []);
+            $staplerConfig = (array)object_get(new $this->translationModel(), 'staplerConfig', []);
             $staplerFields = array_keys($staplerConfig);
             foreach ($staplerFields as $staplerField) {
                 $array = collect($array)->filter(function ($value, $key) use ($staplerField) {
