@@ -15,7 +15,7 @@
     },
 
     "require": {
-        "netcore/translations": "~1.0.43",
+        "netcore/translations": "~1.0.45",
         "predis/predis": "^1.1"
     },
     "minimum-stability": "dev"
