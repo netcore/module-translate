@@ -4,6 +4,7 @@ namespace Modules\Translate\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Factory;
+use Modules\Translate\Console\FindTranslations;
 use Modules\Translate\Console\ImportTranslations;
 
 class TranslateServiceProvider extends ServiceProvider
@@ -40,6 +41,7 @@ class TranslateServiceProvider extends ServiceProvider
 
         $this->commands([
             ImportTranslations::class,
+            FindTranslations::class,
         ]);
     }
 
