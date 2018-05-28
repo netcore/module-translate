@@ -9,14 +9,11 @@ https://github.com/netcore/netcore
 
 https://github.com/netcore/module-admin
 
-https://github.com/nWidart/laravel-modules
-
 ## Installation
  
  Require this package with composer:
  ```$xslt
  composer require netcore/module-translate
-
 ```
  Publish config, assets, migrations. Migrate and seed:
  
@@ -30,29 +27,34 @@ https://github.com/nWidart/laravel-modules
 
 ## Usage
 
-You can configure if you want to use languages with string translations or if you only want to use string translation. It is configured in `config/netcore/module-translate.php` config file
+- To show your translated strings in page you should use "lg" function like this
+```$xslt
+lg('group.key', 'Lorem ipsum')
+```
+- or if you want to use replaceable attributes in translated string
+```$xslt
+lg('group.key', ['attribute' => 'value'], null, 'Lorem ipsum :attribute')
+```
+ - and if you want to use this function in blade files, just add @, for example:
+ ```$xslt
+@lg('group.key', 'Lorem ipsum')
+ ```
 
-To import translations place your translations file in `resources/seed_translation` translations file name should be `transaltions.xlsx` but if you want to change file name, you can do it config file.
+## Finding translations
 
-Translations are stored in excel file sheet. So sheet should look like this
-
-![Translations sheet](https://node-eu.takescreen.io/media/9/94f7983fca0ffe6f803a5841097397fd.png)
-
-Every new column is new language. Remember before adding new language to be sure that it is created in Languages page.
-
-To import new translations run
+- This command will find all translations in project which uses "lg" function and create Excel sheet with keys and values(in available languages) in resources/seed_translations folder with the name specified in config (default: translations)
 
 ```$xslt
-php artisan transaltions:import
+php artisan translations:find
 ```
 
-To get you translations in you page you can use
+## Importing translations
 
-In blade: 
-```@lang('validation.url')```
+- This command will import translations located in Excel sheet to database
 
-In php:
+```$xslt
+php artisan translations:import
+```
 
-```trans('validation.url)```
-
-More info about package can be found in (https://github.com/netcore/translations)
+##
+More info about core package can be found in (https://github.com/netcore/translations)
