@@ -2,6 +2,7 @@
 
 namespace Modules\Translate\Console;
 
+use File;
 use Illuminate\Console\Command;
 use Netcore\Translator\Helpers\TransHelper;
 use Netcore\Translator\Models\Language;
@@ -41,20 +42,15 @@ class FindTranslations extends Command
      */
     public function handle()
     {
-        $paths = [
-            base_path('app'),
-            base_path('modules'),
-            base_path('resources'),
-            base_path('routes')
-        ];
+        $paths = $this->getPaths();
         $translations = [];
 
         // Default laravel translations
-        $files = \File::allFiles(resource_path('lang/en'));
+        $files = File::allFiles(resource_path('lang/en'));
         foreach ($files as $file) {
             $fullPath = $file->getPathname();
             $group = str_replace('.php', '', $file->getFilename());
-            foreach (\File::getRequire($fullPath) as $key => $translation) {
+            foreach (File::getRequire($fullPath) as $key => $translation) {
                 foreach ($this->makeRows($group, $key, $translation) as $row) {
                     if ($row['key'] == 'validation.custom.attribute-name') {
                         continue;
@@ -70,8 +66,10 @@ class FindTranslations extends Command
 
         foreach ($finder as $file) {
             if (preg_match_all('/lg(\(((?:[^()]*|(?-2))*)\))/', $file->getContents(), $matches)) {
+
                 foreach ($matches[2] as $i => $match) {
-                    $value = explode(',', $match);
+                    $match = preg_replace('!\s+!', ' ', $match);
+                    $value = explode(", '", $match);
                     $key = $value[0];
 
                     if (count($value) > 2) {
@@ -81,7 +79,7 @@ class FindTranslations extends Command
                     }
 
                     $key = str_replace("'", '', $key);
-                    $val = preg_replace("/[,']+/", '', trim($val));
+                    $val = preg_replace("/[']+/", '', trim($val));
                     $val = preg_replace('!\s+!', ' ', $val);
 
                     $translations[] = [
@@ -216,5 +214,28 @@ class FindTranslations extends Command
         }
 
         return $rows;
+    }
+
+    /**
+     * Get paths in which to search for translations
+     *
+     * @return array
+     */
+    private function getPaths(): array
+    {
+        $paths = [
+            base_path('app'),
+            base_path('modules'),
+            base_path('resources'),
+            base_path('routes')
+        ];
+
+        foreach ($paths as $i => $path) {
+            if (!File::isDirectory($path)) {
+                unset($paths[$i]);
+            }
+        }
+
+        return $paths;
     }
 }
