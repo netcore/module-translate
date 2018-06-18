@@ -3,10 +3,13 @@
 namespace Modules\Translate\Console;
 
 use File;
+use PhpParser\Lexer;
+use PhpParser\ParserFactory;
 use Illuminate\Console\Command;
-use Netcore\Translator\Helpers\TransHelper;
-use Netcore\Translator\Models\Language;
 use Symfony\Component\Finder\Finder;
+use Netcore\Translator\Helpers\TransHelper;
+use Maatwebsite\Excel\Classes\LaravelExcelWorksheet;
+use Maatwebsite\Excel\Writers\LaravelExcelWriter;
 
 class FindTranslations extends Command
 {
@@ -22,7 +25,7 @@ class FindTranslations extends Command
      *
      * @var string
      */
-    protected $description = 'Find translations in project';
+    protected $description = 'Find translations in project and write to the excel sheet.';
 
     /**
      * Create a new command instance.
@@ -37,84 +40,92 @@ class FindTranslations extends Command
     /**
      * Execute the console command.
      *
-     * @return mixed
-     * @throws \Throwable
+     * @return void
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
-    public function handle()
+    public function handle(): void
     {
         $paths = $this->getPaths();
         $translations = [];
 
-        // Default laravel translations
-        $files = File::allFiles(resource_path('lang/en'));
+        // Default laravel translations.
+        $files = File::allFiles(
+            resource_path('lang/en')
+        );
+
         foreach ($files as $file) {
             $fullPath = $file->getPathname();
             $group = str_replace('.php', '', $file->getFilename());
+
             foreach (File::getRequire($fullPath) as $key => $translation) {
                 foreach ($this->makeRows($group, $key, $translation) as $row) {
-                    if ($row['key'] == 'validation.custom.attribute-name') {
+                    if ($row['key'] === 'validation.custom.attribute-name') {
                         continue;
                     }
-                    $translations[] = $row;
+
+                    $translations[$row['key']] = $row['value'];
                 }
             }
         }
 
         // Find translations in files
         $finder = new Finder();
-        $finder->in($paths)->name('*.php')->files();
+        $finder
+            ->in($paths)
+            ->name('*.php')
+            ->notName('FindTranslations.php')
+            ->files();
+
+        // Init parser.
+        $parser = (new ParserFactory)->create(ParserFactory::ONLY_PHP7, new Lexer());
 
         foreach ($finder as $file) {
             if (preg_match_all('/lg(\(((?:[^()]*|(?-2))*)\))/', $file->getContents(), $matches)) {
+                foreach ($matches[0] as $caller) {
+                    $functionInfo = $parser->parse('<?php ' . $caller . ' ?>');
+                    $functionInfo = $functionInfo[0];
 
-                foreach ($matches[2] as $i => $match) {
-                    $match = preg_replace('!\s+!', ' ', $match);
-                    $value = explode(", '", $match);
-                    $key = $value[0];
+                    $i = 0;
+                    $key = '';
+                    $value = '';
 
-                    if (count($value) > 2) {
-                        $val = isset($value[4]) && isset($value[5]) ? $value[4] . $value[5] : (isset($value[3]) ? $value[3] : $value[2]);
-                    } else {
-                        $val = isset($value[1]) ? $value[1] : '';
+                    foreach ($functionInfo->expr->args as $argument) {
+                        if ($argument->value->getType() === 'Scalar_String') {
+                            if (!$i) {
+                                $key = $argument->value->value;
+                            } else {
+                                $value = preg_replace('!\s+!', ' ', $argument->value->value);
+                            }
+                        }
+
+                        $i++;
                     }
 
-                    $key = str_replace("'", '', $key);
-                    $val = preg_replace("/[']+/", '', trim($val));
-                    $val = preg_replace('!\s+!', ' ', $val);
-
-                    $translations[] = [
-                        'key'   => $key,
-                        'value' => $val
-                    ];
+                    $translations[$key] = $value;
                 }
             }
         }
 
-        // Remove duplicate keys
-        $translations = array_filter($translations, function ($value, $key) use ($translations) {
-            return $key === array_search($value['key'], array_column($translations, 'key'));
-        }, ARRAY_FILTER_USE_BOTH);
+        // Map translations.
+        $mappedTranslations = [];
 
-        // Set value for each language
-        $translations = array_map(function ($translation) {
-            $data = [
-                'key' => $translation['key']
-            ];
+        foreach ($translations as $key => $text) {
+            $data = compact('key');
 
             foreach (TransHelper::getAllLanguages() as $language) {
-                $data[$language->iso_code] = $translation['value'];
+                $data[$language->iso_code] = $text;
             }
 
-            return $data;
-        }, $translations);
+            $mappedTranslations[] = $data;
+        }
 
-        // Reset keys
-        $translations = array_values($translations);
+        // Write translations to the file.
+        $this->writeToFile($mappedTranslations);
 
-        // Write translations to the file
-        $this->writeToFile($translations);
-
-        return;
+        // Import to DB.
+        if ($this->option('import')) {
+            $this->call('translations:import');
+        }
     }
 
     /**
@@ -134,76 +145,54 @@ class FindTranslations extends Command
      */
     protected function getOptions()
     {
-        return [];
+        return [
+            ['import']
+        ];
     }
 
     /**
-     * @param $translations
-     * @return mixed
+     * Write translations to the file.
+     *
+     * @param array $translations
+     * @return void
      */
-    private function writeToFile($translations)
+    protected function writeToFile(array $translations): void
     {
         $excel = app('excel');
         $filename = config('netcore.module-translate.translations_file');
 
-        return $excel->create($filename, function ($excel) use ($translations) {
+        $excel
+            ->create($filename, function (LaravelExcelWriter $writer) use ($translations) {
+                $writer->setTitle('Translations');
 
-            $excel->setTitle('Translations');
-            $excel->sheet('Translations', function ($sheet) use ($translations) {
+                $writer->sheet('Translations', function (LaravelExcelWorksheet $sheet) use ($translations) {
+                    $sheet->fromArray($translations, '', 'A1');
 
-                $languages = Language::all();
-
-                $rows = [
-                    [
-                        'key',
-                    ],
-                ];
-
-                foreach ($languages as $language) {
-                    $rows[0][] = $language->iso_code;
-                }
-
-                // Now $rows would be something like ['key', 'lv', 'ru']
-                $translations = array_map(function ($t) use ($languages) {
-
-                    $item = [
-                        $t['key'],
-                    ];
-
-                    foreach ($languages as $language) {
-                        $item[] = $t[$language->iso_code];
-                    }
-
-                    return $item;
-                }, $translations);
-
-                $rows = array_merge($rows, ($translations));
-
-                $sheet->fromArray($rows, null, 'A1', false, false);
-
-                $sheet->row(1, function ($row) {
-                    $row->setFontWeight('bold');
+                    $sheet->row(1, function ($row) {
+                        $row->setFontWeight('bold');
+                    });
                 });
-
-            });
-        })->store('xlsx', resource_path('seed_translations'));
+            })
+            ->store('xlsx', resource_path('seed_translations'));
     }
 
     /**
+     * Create translations from array.
+     *
      * @param $group
      * @param $key
      * @param $value
      * @return array
      */
-    private function makeRows($group, $key, $value)
+    protected function makeRows($group, $key, $value): array
     {
         $rows = [];
 
         if (is_array($value)) {
-            foreach ($value as $subkey => $subvalue) {
+            foreach ($value as $subKey => $subValue) {
                 $rows[] = [
-                    'key'   => $group . '.' . $key . '.' . $subkey,
-                    'value' => $subvalue,
+                    'key'   => $group . '.' . $key . '.' . $subKey,
+                    'value' => $subValue,
                 ];
             }
         } else {
@@ -217,17 +206,17 @@ class FindTranslations extends Command
     }
 
     /**
-     * Get paths in which to search for translations
+     * Get paths in which to search for translations.
      *
      * @return array
      */
-    private function getPaths(): array
+    protected function getPaths(): array
     {
         $paths = [
             base_path('app'),
             base_path('modules'),
             base_path('resources'),
-            base_path('routes')
+            base_path('routes'),
         ];
 
         foreach ($paths as $i => $path) {
